@@ -40,7 +40,27 @@ commands:
             #  Add revert code here. You can find this in the Getting Started section.
               exit 1
             fi
-            
+  install_awscli:
+    description: Install AWS CLI v2
+    steps:
+      - run:
+          name: Install AWS CLI v2
+          command: |
+            curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+            unzip awscliv2.zip
+            sudo ./aws/install
+  
+  install_ansible:
+    description: Install Ansible 
+    steps:
+      - run:
+          name: Install Ansible 
+          command: |
+            sudo apt update
+            sudo apt install software-properties-common -y
+            sudo add-apt-repository --yes --update ppa:ansible/ansible
+            sudo apt install ansible -y 
+
 jobs:
   build-frontend:
     docker:
@@ -166,24 +186,29 @@ jobs:
       - destroy-environment:
           id: ${CIRCLE_WORKFLOW_ID:0:7}     
 
-#   configure-infrastructure:
-#     docker:
-#       # Docker image here that supports Ansible
-#     steps:
-#       # Checkout code from git
-#       # Add ssh keys with fingerprint
-#       # attach workspace
-#       - run:
-#           name: Install dependencies
-#           command: |
-#             # Your code here
-#             exit 1
-#       - run:
-#           name: Configure server
-#           command: |
-#             # Your code here
-#             exit 1
-#       # Here's where you will add some code to rollback on failure      
+  configure-infrastructure:
+    docker:
+      - image: python:3.7-alpine3.11
+    steps:
+      - checkout
+      - add_ssh_keys:
+          fingerprints: 
+          - "4e:25:40:49:2e:0e:54:35:77:47:a6:f3:0a:f8:cf:6d"
+      - run:
+          name: Install dependencies
+          command: |
+            # install the dependencies needed for your playbook
+            apk add --update ansible
+      - attach_workspace:
+          at: ~/
+      - run:
+          name: Configure server
+          working_directory: ./.circleci/ansible
+          command: |
+            cat inventory.txt 
+            ansible-playbook -i inventory.txt configure-server.yml -vv
+      - destroy-environment:
+          id: ${CIRCLE_WORKFLOW_ID:0:7}      
 
 #   run-migrations:
 #     docker:
@@ -316,8 +341,8 @@ workflows:
           filters:
             branches:
               only: [master]
-      # - configure-infrastructure:
-      #     requires: [deploy-infrastructure]
+      - configure-infrastructure:
+          requires: [deploy-infrastructure]
       # - run-migrations:
       #     requires: [configure-infrastructure]
       # - deploy-frontend:
