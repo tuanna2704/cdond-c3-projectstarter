@@ -26,7 +26,7 @@ commands:
     description: Revert the last migration if successfully run in the current workflow.
     parameters:
       # Add parameter here
-      workflow_id:
+      id:
         type: string
     steps:
       - run:
@@ -35,10 +35,10 @@ commands:
           when: on_fail
           command: |
             # Curl command here to see if there was a successful migration associated with the workflow id, store result in SUCCESS variable
-            SUCCESS=$(curl -H "token: ecdfc255-81e1-4056-9efa-2d7fa10812e1" \
-            --request GET https://api.memstash.io/values/DB_MIGRATION_<< parameters.workflow_id >>)
-            if(( $SUCCESS==1 )); 
-            then
+            # SUCCESS=$(curl -H "token: ecdfc255-81e1-4056-9efa-2d7fa10812e1" \
+            # --request GET https://api.memstash.io/values/DB_MIGRATION_<< parameters.id >>)
+            # if(( $SUCCESS==1 )); 
+            # then
             cd backend
             npm run migrations:revert
             fi
@@ -363,7 +363,8 @@ jobs:
             WorkflowID=$(aws cloudformation \
             list-exports --query "Exports[?Name==\`WorkflowID\`].Value" \
             --no-paginate --output text)
-            curl -H "Content-Type: text/plain" -H "token: ecdfc255-81e1-4056-9efa-2d7fa10812e1" --request PUT --data "$WorkflowID" https://api.memstash.io/values/workflowid
+            echo $WorkflowID
+            # curl -H "Content-Type: text/plain" -H "token: ecdfc255-81e1-4056-9efa-2d7fa10812e1" --request PUT --data "$WorkflowID" https://api.memstash.io/values/workflowid
       - run:
           name: Update cloudfront distribution
           command: |
@@ -372,11 +373,10 @@ jobs:
               --tags project=circleci-${CIRCLE_WORKFLOW_ID:0:7} \
               --stack-name "udapeople-cloudfrontstack" \
               --parameter-overrides WorkflowID="${CIRCLE_WORKFLOW_ID:0:7}"
-      # Here's where you will add some code to rollback on failure
-      - revert-migrations:
-          workflow_id: ${CIRCLE_WORKFLOW_ID:0:7}
-      - destroy-environment:
-          workflow_id: ${CIRCLE_WORKFLOW_ID:0:7}
+      # - revert-migrations:
+      #     id: ${CIRCLE_WORKFLOW_ID:0:7}
+      # - destroy-environment:
+      #     id: ${CIRCLE_WORKFLOW_ID:0:7}
 
 # cleanup:
 #     docker:
